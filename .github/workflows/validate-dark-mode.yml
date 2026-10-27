@@ -1,0 +1,36 @@
+name: Validate dark mode contribution
+on:
+  push:
+    branches: [validation/dark-mode-1218]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: pnpm lint
+      - name: Typecheck
+        if: ${{ !cancelled() }}
+        run: pnpm exec tsc --noEmit
+      - name: Tests
+        if: ${{ !cancelled() }}
+        run: pnpm test --runInBand --ci
+      - name: Patch integrity
+        if: ${{ !cancelled() }}
+        run: |
+          git diff --check origin/develop...HEAD
+          if git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' -- '*.ts' '*.tsx'; then exit 1; fi
